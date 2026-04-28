@@ -1,30 +1,45 @@
+import streamlit as st
+import docx
+
+st.set_page_config(page_title="DOC to HTML Converter", layout="wide")
+
+st.title("🚀 DOC → HTML Converter")
+
+# ✅ FILE UPLOADER (IMPORTANT)
+uploaded_file = st.file_uploader("Upload DOCX file", type=["docx"])
+
+
+# ✅ READ DOC FUNCTION
+def read_doc(file):
+    doc = docx.Document(file)
+    return [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+
+
+# ✅ SAFE GET
 def safe_get(arr, index):
     try:
         return arr[index]
     except:
         return ""
 
+
+# ✅ MAIN HTML GENERATOR
 def generate_html(paragraphs):
 
-    # 🔹 CLEAN DATA (remove empty + urls)
     paragraphs = [p.strip() for p in paragraphs if p.strip() and "http" not in p.lower()]
 
-    # 🔹 SAFETY CHECK
     if not paragraphs or len(paragraphs) < 2:
         return "<p>❌ Not enough content in DOC</p>"
 
-    # 🔹 SAFE FIND FUNCTION
     def find(keyword):
         for i, p in enumerate(paragraphs):
             if keyword.lower() in p.lower():
                 return i
         return None
 
-    # 🔹 BASIC CONTENT
     intro_title = safe_get(paragraphs, 0)
     intro_body = safe_get(paragraphs, 1)
 
-    # 🔹 SAFE INDEX HANDLING (NO OR BUG)
     features_idx = find("why")
     if features_idx is None:
         features_idx = min(2, len(paragraphs)-1)
@@ -37,33 +52,23 @@ def generate_html(paragraphs):
     if steps_idx is None:
         steps_idx = min(10, len(paragraphs)-1)
 
-    # 🔹 FEATURES (3 SAFE ITEMS)
+    # FEATURES
     features = []
     for i in range(features_idx+1, len(paragraphs)):
-        if i >= len(paragraphs):
-            break
-
-        text = paragraphs[i]
-
-        if len(text) < 120:
-            features.append(text)
-
+        if len(paragraphs[i]) < 120:
+            features.append(paragraphs[i])
         if len(features) == 3:
             break
 
-    # fallback if empty
     if not features:
         features = paragraphs[2:5]
 
-    # 🔹 STEPS (SAFE SLICE)
-    steps = []
-    for i in range(steps_idx, min(steps_idx+8, len(paragraphs))):
-        steps.append(paragraphs[i])
+    # STEPS
+    steps = paragraphs[steps_idx:steps_idx+8]
 
-    # 🔹 BUILD HTML SAFELY
+    # BUILD HTML
     html = ""
 
-    # INTRO
     html += f"""
 <div class="prd-intro-box">
 <div class="prd-intro-title">{intro_title}</div>
@@ -71,12 +76,10 @@ def generate_html(paragraphs):
 </div>
 """
 
-    # HEADING
     html += f"""
 <div class="prd-section-h2">{safe_get(paragraphs, features_idx)}</div>
 """
 
-    # FEATURES
     html += '<div class="prd-three-cols">'
     for f in features:
         html += f"""
@@ -86,14 +89,12 @@ def generate_html(paragraphs):
 """
     html += "</div>"
 
-    # MOMENTS
     html += f"""
 <div class="prd-moments-section">
 <div class="prd-section-h2">{safe_get(paragraphs, moments_idx)}</div>
 </div>
 """
 
-    # STEPS
     html += '<div class="prd-steps-list">'
     for i, s in enumerate(steps, 1):
         html += f"""
@@ -105,15 +106,29 @@ def generate_html(paragraphs):
     html += "</div>"
 
     return html
-if uploaded_file:
-    if st.button("Convert to HTML"):
+
+
+# ✅ BUTTON LOGIC (FINAL FIX)
+if uploaded_file is not None:
+
+    st.success("File uploaded ✅")
+
+    if st.button("🔥 Convert to HTML"):
 
         try:
             paragraphs = read_doc(uploaded_file)
             html = generate_html(paragraphs)
 
             st.success("✅ HTML Generated")
+
             st.code(html, language="html")
+
+            st.download_button(
+                label="⬇ Download HTML",
+                data=html,
+                file_name="output.html",
+                mime="text/html"
+            )
 
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
