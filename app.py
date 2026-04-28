@@ -105,3 +105,15 @@ def generate_html(paragraphs):
     html += "</div>"
 
     return html
+if uploaded_file:
+    if st.button("Convert to HTML"):
+
+        try:
+            paragraphs = read_doc(uploaded_file)
+            html = generate_html(paragraphs)
+
+            st.success("✅ HTML Generated")
+            st.code(html, language="html")
+
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
