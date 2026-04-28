@@ -1,20 +1,45 @@
+import streamlit as st
+import docx
 import traceback
-try:
-    paragraphs = read_doc(uploaded_file)
-    html = generate_html(paragraphs)
 
-    st.success("HTML Generated")
-    st.code(html, language="html")
+# ---------------- UI ----------------
+st.set_page_config(page_title="DOC → HTML Converter", layout="wide")
+st.title("📄 DOC to HTML Converter")
 
-except Exception as e:
-    st.error(str(e))
-    st.text(traceback.format_exc())  # 👈 REAL ERROR दिखेगा
+uploaded_file = st.file_uploader("Upload DOCX file", type=["docx"])
+
+
+# ---------------- READ DOC ----------------
+def read_doc(file):
+    doc = docx.Document(file)
+    content = []
+
+    # paragraphs
+    for p in doc.paragraphs:
+        if p.text.strip():
+            content.append(p.text.strip())
+
+    # tables
+    for table in doc.tables:
+        for row in table.rows:
+            row_data = []
+            for cell in row.cells:
+                if cell.text.strip():
+                    row_data.append(cell.text.strip())
+
+            if row_data:
+                content.append(" : ".join(row_data))
+
+    return content
+
+
+# ---------------- SMART HTML GENERATOR ----------------
 def generate_html(paragraphs):
 
     paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
     if len(paragraphs) < 3:
-        return "<p>Not enough content</p>"
+        return "<p>❌ Not enough content</p>"
 
     html = ""
 
@@ -36,16 +61,14 @@ def generate_html(paragraphs):
         if len(text) < 80:
             html += f'<div class="prd-section-h2">{text}</div>'
 
-            # SAFE FEATURES BLOCK
+            # FEATURES (safe)
             if i + 2 < len(paragraphs):
-
                 html += '<div class="prd-three-cols">'
 
                 count = 0
                 j = i + 1
 
                 while j < len(paragraphs) - 1 and count < 3:
-
                     title = paragraphs[j]
                     body = paragraphs[j + 1]
 
@@ -62,14 +85,13 @@ def generate_html(paragraphs):
                 i = j
                 continue
 
-        # 🔹 STEP DETECTION
+        # 🔹 STEPS
         if text[:2].isdigit():
 
             html += '<div class="prd-steps-list">'
             step = 1
 
             while i < len(paragraphs):
-
                 txt = paragraphs[i]
 
                 if not txt[:2].isdigit():
@@ -93,24 +115,19 @@ def generate_html(paragraphs):
             html += "</div>"
             continue
 
-        # 🔹 TABLE DETECTION
+        # 🔹 TABLE
         if ":" in text:
-
             html += """
 <div class="prd-snapshot-card">
 <table class="prd-snapshot-table">
 <tbody>
 """
-
             while i < len(paragraphs) and ":" in paragraphs[i]:
-
                 parts = paragraphs[i].split(":", 1)
-
                 key = parts[0]
                 val = parts[1] if len(parts) > 1 else ""
 
                 html += f"<tr><td>{key}</td><td>{val}</td></tr>"
-
                 i += 1
 
             html += "</tbody></table></div>"
@@ -122,3 +139,36 @@ def generate_html(paragraphs):
         i += 1
 
     return html
+
+
+# ---------------- MAIN ACTION ----------------
+if uploaded_file is not None:
+
+    st.success("✅ File uploaded")
+
+    if st.button("Convert to HTML"):
+
+        try:
+            paragraphs = read_doc(uploaded_file)
+
+            # DEBUG VIEW (optional)
+            with st.expander("🔍 Raw extracted content"):
+                st.write(paragraphs)
+
+            html = generate_html(paragraphs)
+
+            st.success("✅ HTML Generated")
+
+            st.code(html, language="html")
+
+            st.download_button(
+                "⬇ Download HTML",
+                html,
+                file_name="output.html",
+                mime="text/html"
+            )
+
+        except Exception as e:
+            st.error("❌ Error occurred")
+            st.text(str(e))
+            st.text(traceback.format_exc())
