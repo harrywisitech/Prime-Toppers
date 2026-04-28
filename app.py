@@ -1,54 +1,44 @@
+def safe_get(arr, index):
+    return arr[index] if index >= 0 and index < len(arr) else ""
+
 def generate_html(paragraphs):
 
-    # CLEAN unwanted lines
-    clean = []
-    for p in paragraphs:
-        if "http" in p.lower():
-            continue
-        if "primetoppers.com" in p.lower():
-            continue
-        clean.append(p)
+    # CLEAN
+    paragraphs = [p for p in paragraphs if p.strip() and "http" not in p.lower()]
 
-    paragraphs = clean
-
-    # 🔥 DETECT SECTIONS
-    intro_title = paragraphs[0]
-    intro_body = paragraphs[1]
-
-    # find sections by keywords
-    def find_index(keyword):
+    # SAFE FIND
+    def find(keyword):
         for i, p in enumerate(paragraphs):
             if keyword.lower() in p.lower():
                 return i
-        return -1
+        return None
 
-    features_start = find_index("Why the Rectangle")
-    snapshot_start = find_index("Twenty-Four Fresh")
-    moments_start = find_index("Events and Occasions")
-    ingredients_start = find_index("What Goes into")
-    steps_start = find_index("Important Details")
-    cta_start = find_index("Your Brand")
+    intro_title = safe_get(paragraphs, 0)
+    intro_body = safe_get(paragraphs, 1)
 
-    # FEATURES (next 3 blocks)
-    features = paragraphs[features_start+1:features_start+4]
+    features_idx = find("Why the Rectangle") or 2
+    moments_idx = find("Events and Occasions") or 10
+    steps_idx = find("Important Details") or 20
 
-    # SNAPSHOT
-    snapshot = paragraphs[snapshot_start: moments_start]
+    # FEATURES (next 3 headings)
+    features = []
+    for i in range(features_idx+1, features_idx+7):
+        if i < len(paragraphs) and len(paragraphs[i]) < 120:
+            features.append(paragraphs[i])
+        if len(features) == 3:
+            break
 
     # STEPS
-    steps = paragraphs[steps_start+1:cta_start]
+    steps = paragraphs[steps_idx:steps_idx+10]
 
-    # CTA
-    cta = paragraphs[cta_start:]
-
-    # HTML BUILD
+    # HTML
     html = f"""
 <div class="prd-intro-box">
 <div class="prd-intro-title">{intro_title}</div>
 <div class="prd-intro-body">{intro_body}</div>
 </div>
 
-<div class="prd-section-h2">{paragraphs[features_start]}</div>
+<div class="prd-section-h2">{safe_get(paragraphs, features_idx)}</div>
 
 <div class="prd-three-cols">
 """
@@ -62,16 +52,10 @@ def generate_html(paragraphs):
 
     html += "</div>"
 
-    # SNAPSHOT
-    html += '<div class="prd-snapshot-layout"><div class="prd-snapshot-text">'
-    for s in snapshot:
-        html += f"<p>{s}</p>"
-    html += "</div></div>"
-
     # MOMENTS
     html += f"""
 <div class="prd-moments-section">
-<div class="prd-section-h2">{paragraphs[moments_start]}</div>
+<div class="prd-section-h2">{safe_get(paragraphs, moments_idx)}</div>
 </div>
 """
 
@@ -84,12 +68,6 @@ def generate_html(paragraphs):
 <div class="prd-step-body">{s}</div>
 </div>
 """
-    html += "</div>"
-
-    # CTA
-    html += '<div class="prd-intro-box">'
-    for c in cta:
-        html += f"<p>{c}</p>"
     html += "</div>"
 
     return html
