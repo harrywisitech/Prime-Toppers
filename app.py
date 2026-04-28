@@ -1,12 +1,16 @@
 def safe_get(arr, index):
-    return arr[index] if index >= 0 and index < len(arr) else ""
+    try:
+        return arr[index]
+    except:
+        return ""
 
 def generate_html(paragraphs):
 
-    # CLEAN
-    paragraphs = [p for p in paragraphs if p.strip() and "http" not in p.lower()]
+    paragraphs = [p.strip() for p in paragraphs if p.strip() and "http" not in p.lower()]
 
-    # SAFE FIND
+    if len(paragraphs) < 3:
+        return "<p>Not enough content</p>"
+
     def find(keyword):
         for i, p in enumerate(paragraphs):
             if keyword.lower() in p.lower():
@@ -16,50 +20,55 @@ def generate_html(paragraphs):
     intro_title = safe_get(paragraphs, 0)
     intro_body = safe_get(paragraphs, 1)
 
-    features_idx = find("Why the Rectangle") or 2
-    moments_idx = find("Events and Occasions") or 10
-    steps_idx = find("Important Details") or 20
+    features_idx = find("Why")
+    if features_idx is None:
+        features_idx = 2
 
-    # FEATURES (next 3 headings)
+    moments_idx = find("Events")
+    if moments_idx is None:
+        moments_idx = min(8, len(paragraphs)-1)
+
+    steps_idx = find("Important")
+    if steps_idx is None:
+        steps_idx = min(12, len(paragraphs)-1)
+
     features = []
-    for i in range(features_idx+1, features_idx+7):
-        if i < len(paragraphs) and len(paragraphs[i]) < 120:
+    for i in range(features_idx+1, min(features_idx+10, len(paragraphs))):
+        if len(paragraphs[i]) < 120:
             features.append(paragraphs[i])
         if len(features) == 3:
             break
 
-    # STEPS
-    steps = paragraphs[steps_idx:steps_idx+10]
+    steps = paragraphs[steps_idx:steps_idx+8]
 
-    # HTML
-    html = f"""
+    html = ""
+
+    html += f"""
 <div class="prd-intro-box">
 <div class="prd-intro-title">{intro_title}</div>
 <div class="prd-intro-body">{intro_body}</div>
 </div>
-
-<div class="prd-section-h2">{safe_get(paragraphs, features_idx)}</div>
-
-<div class="prd-three-cols">
 """
 
+    html += f"""
+<div class="prd-section-h2">{safe_get(paragraphs, features_idx)}</div>
+"""
+
+    html += '<div class="prd-three-cols">'
     for f in features:
         html += f"""
 <div class="prd-feat-col">
 <div class="prd-feat-col-title">{f}</div>
 </div>
 """
-
     html += "</div>"
 
-    # MOMENTS
     html += f"""
 <div class="prd-moments-section">
 <div class="prd-section-h2">{safe_get(paragraphs, moments_idx)}</div>
 </div>
 """
 
-    # STEPS
     html += '<div class="prd-steps-list">'
     for i, s in enumerate(steps, 1):
         html += f"""
