@@ -1,38 +1,53 @@
+import traceback
+try:
+    paragraphs = read_doc(uploaded_file)
+    html = generate_html(paragraphs)
+
+    st.success("HTML Generated")
+    st.code(html, language="html")
+
+except Exception as e:
+    st.error(str(e))
+    st.text(traceback.format_exc())  # 👈 REAL ERROR दिखेगा
 def generate_html(paragraphs):
 
     paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
-    if len(paragraphs) < 5:
+    if len(paragraphs) < 3:
         return "<p>Not enough content</p>"
 
     html = ""
 
-    # 🔹 INTRO
+    # INTRO
     html += f"""
 <div class="prd-intro-box">
 <div class="prd-intro-title">{paragraphs[0]}</div>
-<div class="prd-intro-body">{paragraphs[1]}</div>
+<div class="prd-intro-body">{paragraphs[1] if len(paragraphs) > 1 else ""}</div>
 </div>
 """
 
     i = 2
 
-    # 🔹 SECTION DETECTION LOOP
     while i < len(paragraphs):
 
         text = paragraphs[i]
 
-        # 🟣 HEADING DETECTION
+        # 🔹 HEADING
         if len(text) < 80:
             html += f'<div class="prd-section-h2">{text}</div>'
 
-            # 🔹 FEATURES BLOCK (next 3 pairs)
-            if i + 6 < len(paragraphs):
+            # SAFE FEATURES BLOCK
+            if i + 2 < len(paragraphs):
+
                 html += '<div class="prd-three-cols">'
 
-                for j in range(1, 7, 2):
-                    title = paragraphs[i + j]
-                    body = paragraphs[i + j + 1]
+                count = 0
+                j = i + 1
+
+                while j < len(paragraphs) - 1 and count < 3:
+
+                    title = paragraphs[j]
+                    body = paragraphs[j + 1]
 
                     html += f"""
 <div class="prd-feat-col">
@@ -40,17 +55,19 @@ def generate_html(paragraphs):
 <div class="prd-feat-col-body">{body}</div>
 </div>
 """
+                    j += 2
+                    count += 1
 
                 html += "</div>"
-                i += 7
+                i = j
                 continue
 
-        # 🟢 STEP DETECTION (01, 02, etc.)
+        # 🔹 STEP DETECTION
         if text[:2].isdigit():
 
             html += '<div class="prd-steps-list">'
-
             step = 1
+
             while i < len(paragraphs):
 
                 txt = paragraphs[i]
@@ -76,47 +93,32 @@ def generate_html(paragraphs):
             html += "</div>"
             continue
 
-        # 🟡 TABLE DETECTION
+        # 🔹 TABLE DETECTION
         if ":" in text:
+
             html += """
 <div class="prd-snapshot-card">
 <table class="prd-snapshot-table">
 <tbody>
 """
+
             while i < len(paragraphs) and ":" in paragraphs[i]:
-                key, val = paragraphs[i].split(":", 1)
+
+                parts = paragraphs[i].split(":", 1)
+
+                key = parts[0]
+                val = parts[1] if len(parts) > 1 else ""
+
                 html += f"<tr><td>{key}</td><td>{val}</td></tr>"
+
                 i += 1
 
             html += "</tbody></table></div>"
             continue
 
-        # 🔵 NORMAL PARAGRAPH
+        # 🔹 NORMAL TEXT
         html += f"<p>{text}</p>"
 
         i += 1
 
     return html
-
-def read_doc(file):
-    doc = docx.Document(file)
-
-    content = []
-
-    # paragraphs
-    for p in doc.paragraphs:
-        if p.text.strip():
-            content.append(p.text.strip())
-
-    # tables
-    for table in doc.tables:
-        for row in table.rows:
-            row_data = []
-            for cell in row.cells:
-                if cell.text.strip():
-                    row_data.append(cell.text.strip())
-
-            if row_data:
-                content.append(" : ".join(row_data))
-
-    return content
